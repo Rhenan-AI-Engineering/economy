@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Suíte PRECARTÓRIO e SplitShield — Ambiente de testes</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#fff; --text:#1c2333; --muted:#5b6479; --line:#d9dfec;
+    --brand:#1f3864; --accent:#2e75b6; --ok:#177245; --okbg:#e3f4ea; --off:#8a5a00; --offbg:#fff3d6;
+    --warnbg:#fff8e1; --warnline:#e0a100;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#10141f; --card:#182033; --text:#e8ecf6; --muted:#9aa5bf; --line:#2a3550;
+      --brand:#9db8e8; --accent:#5aa0e6; --ok:#6fd49a; --okbg:#143124; --off:#f0c36a; --offbg:#3a2e12;
+      --warnbg:#2b2410; --warnline:#b88a14; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:2rem 1rem 3rem}
+  h1{margin:0 0 .25rem;font-size:1.65rem;color:var(--brand)}
+  .sub{margin:0 0 1.4rem;color:var(--muted)}
+  .notice{background:var(--warnbg);border-left:4px solid var(--warnline);border-radius:6px;padding:.8rem 1rem;margin:0 0 1.6rem;font-size:.95rem}
+  .grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1.2rem;display:flex;flex-direction:column;gap:.7rem}
+  .card h2{margin:0;font-size:1.2rem;color:var(--brand);display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap}
+  .pill{font-size:.72rem;font-weight:600;border-radius:999px;padding:.15rem .6rem;white-space:nowrap}
+  .pill.on{background:var(--okbg);color:var(--ok)} .pill.off{background:var(--offbg);color:var(--off)}
+  .desc{margin:0;color:var(--muted);font-size:.93rem}
+  .q{margin:0;font-style:italic;font-size:.93rem}
+  .card h3{margin:.3rem 0 0;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .card ul{margin:0;padding-left:1.1rem;font-size:.92rem}
+  .card li{margin:.15rem 0}
+  .btn{margin-top:auto;display:inline-block;text-align:center;text-decoration:none;font-weight:600;border-radius:8px;padding:.65rem 1rem;background:var(--accent);color:#fff;border:0}
+  .btn:hover{filter:brightness(1.08)}
+  .btn[aria-disabled="true"]{background:var(--line);color:var(--muted);pointer-events:none;cursor:not-allowed}
+  .how{margin:1.8rem 0 0;padding:1rem 1.2rem;background:var(--card);border:1px solid var(--line);border-radius:12px;font-size:.93rem}
+  .how h2{margin:0 0 .4rem;font-size:1rem;color:var(--brand)}
+  .how ol{margin:.2rem 0 0;padding-left:1.2rem}
+  footer{margin-top:1.4rem;color:var(--muted);font-size:.85rem}
+  code{font-family:ui-monospace,Consolas,monospace;font-size:.88em;background:var(--bg);padding:.05rem .3rem;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Suíte PRECARTÓRIO e SplitShield</h1>
+  <p class="sub">Ambiente de testes das três aplicações. Escolha uma e experimente as telas.</p>
+
+  <div class="notice" role="note">
+    <strong>Acesso restrito.</strong> Ao abrir uma aplicação, o navegador pede <strong>usuário e senha</strong>
+    (informados por quem convidou você). Use <strong>apenas dados fictícios</strong>: o ambiente é compartilhado
+    e os registros podem ser apagados a qualquer momento.
+  </div>
+
+  <div class="grid" id="cards" aria-live="polite"></div>
+
+  <section class="how">
+    <h2>Como experimentar</h2>
+    <ol>
+      <li>Clique em <b>Abrir aplicação</b> e informe usuário e senha.</li>
+      <li>Cadastre os dados de exemplo sugeridos em cada cartão e siga o roteiro do relatório recebido.</li>
+      <li>Tente também os <b>erros de propósito</b> (CNPJ inválido, número de processo com dígito errado…) para ver as regras de proteção.</li>
+      <li>Se o botão estiver indisponível, os endereços estão sendo renovados. Aguarde alguns minutos e recarregue.</li>
+    </ol>
+  </section>
+
+  <footer>
+    <span id="atualizado">Carregando endereços…</span><br>
+    Os endereços são temporários e esta página se atualiza sozinha a cada minuto.
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // Catálogo das aplicações. Os endereços reais vêm de links.json (gerado pelo servidor).
+  var APPS = [
+    { id: 'original', nome: 'preca-original', desc: 'Gestão de carteira de precatórios e RPVs.',
+      pergunta: '“Este crédito é elegível, quanto vale e posso cedê-lo?”',
+      testes: ['Cadastrar cliente, detentor e ativo (CNJ válido, tribunal preenchido sozinho)',
+               'Classificar o ativo como VERDE ou AMARELA (Resolução CMN 5.343/2026)',
+               'Ver o bloqueio preventivo SUS agir em ativos de saúde',
+               'Calcular a atualização (manual e trifásico) e ver a carteira'],
+      dados: 'CNPJ 12.345.678/0001-95 · CPF 529.982.247-25 · CNJ 1234567-86.2019.8.26.0100' },
+    { id: 'proposta', nome: 'preca-proposta', desc: 'Diligência de precatórios e RPVs.',
+      pergunta: '“Este processo está documentado e qual é o risco preliminar?”',
+      testes: ['Cadastrar organização e processo (CNJ com máscara manual)',
+               'Registrar documento e ver o hash SHA-256 calculado no navegador',
+               'Classificar o risco com revisor humano e medir a prontidão documental',
+               'Verificar a integridade do Compliance Ledger'],
+      dados: 'CNPJ 11.222.333/0001-81 · CNJ 2345678-18.2018.4.01.3400 · valor de face 150000.50' },
+    { id: 'splitaudit', nome: 'splitaudit', desc: 'Validação tributária CBS/IBS (split payment).',
+      pergunta: '“O tributo informado está correto e consigo provar a decisão?”',
+      testes: ['Validar uma transação: base 1000, CBS 90 e IBS 10 (aprovada) ou 90,01 (divergente)',
+               'Abrir uma inconsistência e mudar o status (algumas transições são bloqueadas)',
+               'Emitir um certificado e registrar a explicação da decisão',
+               'Verificar a cadeia de auditoria'],
+      dados: 'CNPJ 12345678000195 (só dígitos) · base 1000,00 · alíquotas 0,09 e 0,01' }
+  ];
+
+  var cards = document.getElementById('cards');
+  var rodape = document.getElementById('atualizado');
+
+  function el(tag, attrs, text) {
+    var e = document.createElement(tag);
+    if (attrs) for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  // Só aceita endereços https:// (evita javascript: ou outros esquemas vindos do JSON).
+  function urlSegura(u) {
+    try { var x = new URL(u); return x.protocol === 'https:' ? x.href : ''; } catch (e) { return ''; }
+  }
+
+  function render(dados) {
+    var porId = {};
+    ((dados && dados.apps) || []).forEach(function (a) { porId[a.id] = a; });
+    cards.textContent = '';
+    APPS.forEach(function (app) {
+      var info = porId[app.id] || {};
+      var url = urlSegura(info.url);
+      var online = !!(info.online && url);
+
+      var card = el('article', { 'class': 'card' });
+      var h2 = el('h2');
+      h2.appendChild(el('span', null, app.nome));
+      h2.appendChild(el('span', { 'class': 'pill ' + (online ? 'on' : 'off') }, online ? 'No ar' : 'Indisponível'));
+      card.appendChild(h2);
+      card.appendChild(el('p', { 'class': 'desc' }, app.desc));
+      card.appendChild(el('p', { 'class': 'q' }, app.pergunta));
+      card.appendChild(el('h3', null, 'O que experimentar'));
+      var ul = el('ul');
+      app.testes.forEach(function (t) { ul.appendChild(el('li', null, t)); });
+      card.appendChild(ul);
+      card.appendChild(el('h3', null, 'Dados de exemplo'));
+      card.appendChild(el('p', { 'class': 'desc' }, app.dados));
+
+      var a = el('a', { 'class': 'btn' }, online ? 'Abrir aplicação' : 'Aguardando endereço…');
+      if (online) { a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+      else { a.setAttribute('aria-disabled', 'true'); a.setAttribute('tabindex', '-1'); }
+      card.appendChild(a);
+      cards.appendChild(card);
+    });
+
+    if (dados && dados.atualizado_em) {
+      var d = new Date(dados.atualizado_em);
+      rodape.textContent = isNaN(d) ? 'Endereços carregados.' : 'Endereços atualizados em ' + d.toLocaleString('pt-BR') + '.';
+    } else {
+      rodape.textContent = 'Endereços ainda não publicados.';
+    }
+  }
+
+  function carregar() {
+    // O parâmetro t evita o cache do navegador e do CDN do GitHub Pages.
+    fetch('links.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(render)
+      .catch(function () {
+        render(null);
+        rodape.textContent = 'Não foi possível carregar os endereços agora. Tente novamente em instantes.';
+      });
+  }
+
+  carregar();
+  setInterval(carregar, 60000);
+})();
+</script>
+</body>
+</html>
